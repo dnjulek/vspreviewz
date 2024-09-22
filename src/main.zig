@@ -83,8 +83,6 @@ pub fn main() !void {
     zstbi.init(gpa);
     defer zstbi.deinit();
 
-    var frame: i32 = 0;
-    var prev_frame: i32 = -1;
     var image = try zstbi.Image.createEmpty(@intCast(n.w), @intCast(n.h), 4, .{});
     defer image.deinit();
 
@@ -103,6 +101,10 @@ pub fn main() !void {
     });
 
     const texture_view = gctx.createTextureView(texture, .{});
+
+    var frame: i32 = 0;
+    var prev_frame: i32 = -1;
+    const last_frame = n.n_frames - 1;
 
     while (!window.shouldClose() and window.getKey(.escape) != .press) {
         zglfw.pollEvents();
@@ -170,15 +172,22 @@ pub fn main() !void {
         )) {
             zgui.pushStyleVar1f(.{ .idx = .grab_min_size, .v = 1 });
 
-            zgui.setNextItemWidth(sz_x - 15); //533-537--71--81
+            zgui.setNextItemWidth(sz_x - 15);
             _ = zgui.sliderInt("##", .{
                 .v = &frame,
                 .min = 0,
-                .max = n.n_frames - 1,
+                .max = last_frame,
             });
-
             zgui.popStyleVar(.{ .count = 1 });
-            zgui.text("{}/{}", .{ frame, n.n_frames - 1 });
+
+            // TODO: frabe-by-frame control
+            if (zgui.isKeyDown(.left_arrow)) {
+                frame = @max(0, frame - 1);
+            } else if (zgui.isKeyDown(.right_arrow)) {
+                frame = @min(last_frame, frame + 1);
+            }
+
+            zgui.text("{}/{}", .{ frame, last_frame });
 
             // zgui.showDemoWindow(null);
 
