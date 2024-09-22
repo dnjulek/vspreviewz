@@ -139,7 +139,7 @@ pub fn main() !void {
         zgui.setNextWindowPos(.{ .x = pos_x, .y = pos_y });
         zgui.setNextWindowSize(.{ .w = sz_x, .h = sz_y - 200 });
         if (zgui.begin(
-            "##",
+            "##Frame Display",
             .{ .flags = .{
                 .no_move = true,
                 .no_resize = true,
@@ -151,16 +151,13 @@ pub fn main() !void {
         )) {
             const tex_id = gctx.lookupResource(texture_view).?;
             zgui.image(tex_id, .{ .w = @floatFromInt(n.w), .h = @floatFromInt(n.h) });
-
-            // zgui.showDemoWindow(null);
-
         }
         zgui.end();
 
         zgui.setNextWindowPos(.{ .x = pos_x, .y = pos_y + (sz_y - 200) });
         zgui.setNextWindowSize(.{ .w = sz_x, .h = 200 });
         if (zgui.begin(
-            "###",
+            "##Main Menu",
             .{ .flags = .{
                 .no_move = true,
                 .no_resize = true,
@@ -170,15 +167,6 @@ pub fn main() !void {
                 .horizontal_scrollbar = true,
             } },
         )) {
-            zgui.pushStyleVar1f(.{ .idx = .grab_min_size, .v = 1 });
-
-            zgui.setNextItemWidth(sz_x - 15);
-            _ = zgui.sliderInt("##", .{
-                .v = &frame,
-                .min = 0,
-                .max = last_frame,
-            });
-            zgui.popStyleVar(.{ .count = 1 });
 
             // TODO: frabe-by-frame control
             if (zgui.isKeyDown(.left_arrow)) {
@@ -187,10 +175,30 @@ pub fn main() !void {
                 frame = @min(last_frame, frame + 1);
             }
 
-            zgui.text("{}/{}", .{ frame, last_frame });
+            {
+                zgui.beginGroup();
+                zgui.setNextItemWidth(105);
 
-            // zgui.showDemoWindow(null);
+                //TODO: Mouse control
+                if (zgui.inputInt("##Frame Slecet Input", .{ .v = &frame })) {
+                    frame = @min(@max(frame, 0), last_frame);
+                }
 
+                zgui.sameLine(.{ .spacing = 4 });
+                zgui.pushStyleVar1f(.{ .idx = .grab_min_size, .v = 1 });
+                zgui.setNextItemWidth(sz_x - 125);
+                _ = zgui.sliderInt("##Frame Slecet Slider", .{
+                    .v = &frame,
+                    .min = 0,
+                    .max = last_frame,
+                });
+                zgui.popStyleVar(.{ .count = 1 });
+                zgui.endGroup();
+            }
+
+            // zgui.text("{}/{}", .{ frame, last_frame });
+
+            zgui.showDemoWindow(null);
         }
         zgui.end();
 
