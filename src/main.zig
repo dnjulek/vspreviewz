@@ -73,8 +73,8 @@ pub fn main() !void {
     const style = zgui.getStyle();
     style.scaleAllSizes(scale_factor);
     style.frame_border_size = 1;
-    style.frame_rounding = 12;
-    style.grab_rounding = 12;
+    // style.frame_rounding = 12;
+    // style.grab_rounding = 12;
     // style.grab_min_size = 1;
 
     const v = try vssc.VVV.init(gpa);
@@ -131,11 +131,11 @@ pub fn main() !void {
         );
 
         const viewport = zgui.getMainViewport();
-        const pos = viewport.getPos();
-        const sz = viewport.getSize();
-        zgui.setNextWindowPos(.{ .x = pos[0], .y = pos[1] });
-        zgui.setNextWindowSize(.{ .w = sz[0], .h = sz[1] });
+        const pos_x, const pos_y = viewport.getPos();
+        const sz_x, const sz_y = viewport.getSize();
 
+        zgui.setNextWindowPos(.{ .x = pos_x, .y = pos_y });
+        zgui.setNextWindowSize(.{ .w = sz_x, .h = sz_y - 200 });
         if (zgui.begin(
             "##",
             .{ .flags = .{
@@ -150,9 +150,27 @@ pub fn main() !void {
             const tex_id = gctx.lookupResource(texture_view).?;
             zgui.image(tex_id, .{ .w = @floatFromInt(n.w), .h = @floatFromInt(n.h) });
 
+            // zgui.showDemoWindow(null);
+
+        }
+        zgui.end();
+
+        zgui.setNextWindowPos(.{ .x = pos_x, .y = pos_y + (sz_y - 200) });
+        zgui.setNextWindowSize(.{ .w = sz_x, .h = 200 });
+        if (zgui.begin(
+            "###",
+            .{ .flags = .{
+                .no_move = true,
+                .no_resize = true,
+                .no_title_bar = false,
+                .no_collapse = true,
+                .no_background = false,
+                .horizontal_scrollbar = true,
+            } },
+        )) {
             zgui.pushStyleVar1f(.{ .idx = .grab_min_size, .v = 1 });
 
-            zgui.setNextItemWidth(sz[0] - 20);
+            zgui.setNextItemWidth(sz_x - 15); //533-537--71--81
             _ = zgui.sliderInt("##", .{
                 .v = &frame,
                 .min = 0,
@@ -160,7 +178,6 @@ pub fn main() !void {
             });
 
             zgui.popStyleVar(.{ .count = 1 });
-
             zgui.text("{}/{}", .{ frame, n.n_frames - 1 });
 
             // zgui.showDemoWindow(null);
