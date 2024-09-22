@@ -87,8 +87,6 @@ pub fn main() !void {
     var prev_frame: i32 = -1;
     var image = try zstbi.Image.createEmpty(@intCast(n.w), @intCast(n.h), 4, .{});
     defer image.deinit();
-    const vsframe = vssc.getFrame(v.vsapi, &image, n.node, &frame);
-    defer v.vsapi.freeFrame.?(vsframe);
 
     const texture = gctx.createTexture(.{
         .usage = .{ .texture_binding = true, .copy_dst = true },
@@ -110,8 +108,8 @@ pub fn main() !void {
         zglfw.pollEvents();
 
         if (prev_frame != frame) {
-            const vsframe2 = vssc.getFrame(v.vsapi, &image, n.node, &frame);
-            defer v.vsapi.freeFrame.?(vsframe2);
+            const vsframe = vssc.getFrame(v.vsapi, &image, n.node, &frame);
+            defer v.vsapi.freeFrame.?(vsframe);
 
             gctx.queue.writeTexture(
                 .{ .texture = gctx.lookupResource(texture).? },
