@@ -10,6 +10,8 @@ const vs = vapoursynth.vapoursynth4;
 const vsh = vapoursynth.vshelper;
 const vss = vapoursynth.vsscript4;
 
+const c_allocator = std.heap.c_allocator;
+
 pub const VVV = struct {
     vsapi: *const vs.API,
     vssapi: *const vss.API,
@@ -61,10 +63,20 @@ pub const VVV = struct {
     }
 };
 
-pub fn getNode(v: VVV) struct { node: ?*vs.Node, n_frames: i32, w: i32, h: i32 } {
+pub fn getNode(v: VVV, nodes_idx: *[]i32, node_select: *u32) !struct { node: ?*vs.Node, n_frames: i32, w: i32, h: i32 } {
     const vsapi = v.vsapi;
-    const video_node = v.vssapi.getOutputNode.?(v.vs_script, 0);
-    const vs_core = v.vssapi.getCore.?(v.vs_script);
+    const vssapi = v.vssapi;
+    const idx_size = vssapi.getAvailableOutputNodes.?(v.vs_script, 0, null);
+    if (idx_size <= 0) {
+        std.log.err("[vspreviewz] Script has no outputs set.\n", .{});
+        std.process.exit(1);
+    }
+    nodes_idx.* = try c_allocator.alloc(i32, @intCast(idx_size));
+    _ = vssapi.getAvailableOutputNodes.?(v.vs_script, idx_size, nodes_idx.ptr);
+
+    const video_node = vssapi.getOutputNode.?(v.vs_script, nodes_idx.*[node_select.*]);
+
+    const vs_core = vssapi.getCore.?(v.vs_script);
     const vi = vsapi.getVideoInfo.?(video_node);
     const matrix: i32 = if (vi.height > 576) 1 else 6;
     const args = vsapi.createMap.?();

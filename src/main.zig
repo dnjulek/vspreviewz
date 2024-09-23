@@ -10,6 +10,7 @@ const vssc = @import("vapoursynth_script.zig");
 const wgpu = zgpu.wgpu;
 
 const window_title = "vspreviewz";
+const c_allocator = std.heap.c_allocator;
 
 pub fn main() !void {
     try zglfw.init();
@@ -77,8 +78,25 @@ pub fn main() !void {
     // style.grab_rounding = 12;
     // style.grab_min_size = 1;
 
+    var node_select: u32 = 0;
+    var prev_node_select: u32 = 0;
+    var nodes_idx: []i32 = undefined;
+    defer c_allocator.free(nodes_idx);
     const v = try vssc.VVV.init(gpa);
-    const n = vssc.getNode(v);
+    var n = try vssc.getNode(v, &nodes_idx, &node_select);
+
+    const combo_itens: [][:0]u8 = try c_allocator.alloc([:0]u8, nodes_idx.len);
+    defer c_allocator.free(combo_itens);
+
+    const str_len = std.fmt.count("Video Node {}\x00", .{999});
+    const _str_buff: []u8 = try c_allocator.alloc(u8, str_len * nodes_idx.len);
+    defer c_allocator.free(_str_buff);
+    var str_buff = _str_buff[0..];
+
+    for (combo_itens, 0..) |*x, y| {
+        x.* = try std.fmt.bufPrintZ(str_buff, "Video Node {}", .{nodes_idx[y]});
+        str_buff = str_buff[str_len..];
+    }
 
     zstbi.init(gpa);
     defer zstbi.deinit();
@@ -109,7 +127,16 @@ pub fn main() !void {
     while (!window.shouldClose() and window.getKey(.escape) != .press) {
         zglfw.pollEvents();
 
-        if (prev_frame != frame) {
+        const new_node = prev_node_select != node_select;
+        const new_frame = prev_frame != frame;
+
+        if (new_node) {
+            v.vsapi.freeNode.?(n.node);
+            n = try vssc.getNode(v, &nodes_idx, &node_select);
+            prev_node_select = node_select;
+        }
+
+        if (new_frame or new_node) {
             const vsframe = vssc.getFrame(v.vsapi, &image, n.node, &frame);
             defer v.vsapi.freeFrame.?(vsframe);
 
@@ -161,7 +188,7 @@ pub fn main() !void {
             .{ .flags = .{
                 .no_move = true,
                 .no_resize = true,
-                .no_title_bar = false,
+                .no_title_bar = true,
                 .no_collapse = true,
                 .no_background = false,
                 .horizontal_scrollbar = true,
@@ -196,9 +223,26 @@ pub fn main() !void {
                 zgui.endGroup();
             }
 
-            // zgui.text("{}/{}", .{ frame, last_frame });
+            zgui.setNextItemWidth(110);
+            const pv_combo = combo_itens[node_select];
+            if (zgui.beginCombo("##Node Select", .{ .preview_value = @ptrCast(pv_combo.ptr) })) {
+                defer zgui.endCombo();
+                for (combo_itens, 0..) |x, y| {
+                    const is_selected = node_select == y;
+                    if (zgui.selectable(x, .{ .selected = is_selected })) {
+                        node_select = @intCast(y);
+                    }
 
-            zgui.showDemoWindow(null);
+                    if (is_selected) {
+                        zgui.setItemDefaultFocus();
+                    }
+                }
+            }
+
+            zgui.text("node_select: {}", .{node_select});
+            zgui.text("nodes_idx.len: {}", .{nodes_idx.len});
+
+            //  zgui.showDemoWindow(null);
         }
         zgui.end();
 
@@ -223,4 +267,6 @@ pub fn main() !void {
         gctx.submit(&.{commands});
         _ = gctx.present();
     }
+
+    v.vsapi.freeNode.?(n.node);
 }
